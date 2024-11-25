@@ -67,7 +67,7 @@ BaseIndexingPolicy::BaseIndexingPolicy(const Params &p)
 
     // Make space for the entries
     for (uint32_t i = 0; i < numSets; ++i) {
-        sets[i].resize(assoc);
+        sets[i].resize(numSegments);
     }
 }
 
