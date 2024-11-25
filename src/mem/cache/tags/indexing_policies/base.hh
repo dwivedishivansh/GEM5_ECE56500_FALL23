@@ -91,6 +91,9 @@ class BaseIndexingPolicy : public SimObject
      */
     std::vector<std::vector<ReplaceableEntry*>> sets;
 
+    static constexpr size_t SegmentSize = 8;  // Each segment is 8 bytes
+    static constexpr size_t NumSegments = 32; // Total of 32 segments
+
     /**
      * The amount to shift the address to get the tag.
      */
