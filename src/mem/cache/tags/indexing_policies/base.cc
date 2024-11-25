@@ -95,15 +95,6 @@ BaseIndexingPolicy::setEntry(ReplaceableEntry* entry, const uint64_t index)
     entry->setPosition(set, way);
 }
 
-// Set an entry pointer to its corresponding set and way
-void BaseIndexingPolicy::setEntry(ReplaceableEntry* entry, const uint64_t index)
-{
-    uint32_t set = index & setMask;        // Get the set index
-    uint32_t way = (index >> setShift) & (assoc - 1);  // Get the way index
-
-    sets[set].entries[way] = entry;        // Assign the entry to the set and way
-}
-
 Addr
 BaseIndexingPolicy::extractTag(const Addr addr) const
 {
