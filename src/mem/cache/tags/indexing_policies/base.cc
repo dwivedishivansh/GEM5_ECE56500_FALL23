@@ -71,42 +71,10 @@ BaseIndexingPolicy::BaseIndexingPolicy(const Params &p)
     }
 }
 
-//ReplaceableEntry*
-//BaseIndexingPolicy::getEntry(const uint32_t set, const uint32_t way) const
-//{
-//    return sets[set][way];
-//}
-
 ReplaceableEntry*
-BaseIndexingPolicy::getEntryData(const uint32_t set, const uint32_t segmentOffset, 
-                                 const bool cStatus, const size_t cSize) const
+BaseIndexingPolicy::getEntry(const uint32_t set, const uint32_t way) const
 {
-    // Validate set and segmentOffset indices
-    if (set >= sets.size() || segmentOffset >= sets[set].size()) {
-        throw std::out_of_range("Index out of bounds");
-    }
-
-    ReplaceableEntry* entry = sets[set][segmentOffset];
-    if (!entry) {
-        throw std::runtime_error("Entry is null");
-    }
-
-    // Calculate the byte range based on compression status
-    size_t dataStart = segmentOffset * 8; // Convert segmentOffset to byte offset
-    size_t dataEnd;
-
-    if (cStatus) {
-        // Compressed: cSize is the number of segments, so multiply by 8 to get byte size
-        dataEnd = dataStart + (cSize * 8);
-
-    } else {
-        // Uncompressed: Always extract one segment (8 bytes)
-        dataEnd = dataStart + (8 * 8);
-
-    }
-
-    // Extract the data range and return
-    return sets[set][dataStart, dataEnd];
+    return sets[set][way];
 }
 
 void
