@@ -89,7 +89,18 @@ class BaseIndexingPolicy : public SimObject
     /**
      * The cache sets.
      */
-    std::vector<std::vector<ReplaceableEntry*>> sets;
+    //std::vector<std::vector<ReplaceableEntry*>> sets;
+    
+    // Cache set structure for DCSV
+    struct CacheSet {
+        std::vector<ReplaceableEntry*> entries;        // Tags and metadata
+        std::vector<std::vector<uint8_t>> dataSegments; // Data segments (each segment is 8 bytes)
+        std::vector<uint8_t> compressedSizes;          // Compressed size for each entry (e.g., number of segments)
+        std::vector<bool> compressionStatus;           // Compression status for each entry
+        std::vector<char> coherenceStates;             // Coherence state for each entry
+    };
+
+    std::vector<CacheSet> sets; // Cache sets with entries and metadata
 
     /**
      * The amount to shift the address to get the tag.
@@ -158,6 +169,20 @@ class BaseIndexingPolicy : public SimObject
      */
     virtual Addr regenerateAddr(const Addr tag, const ReplaceableEntry* entry)
                                                                     const = 0;
+
+    // Functions to set metadata for DCSV
+    void setCompressedSize(uint32_t set, uint32_t way, uint8_t compressedSize);
+    void setCompressionStatus(uint32_t set, uint32_t way, bool status);
+    void setCoherenceState(uint32_t set, uint32_t way, char state);
+
+    // Print cache information
+    std::string printCache() const;
+
+private:
+    // Helper functions
+    bool isPowerOf2(uint32_t x) const;
+    uint32_t floorLog2(uint32_t x) const;
+
 };
 
 } // namespace gem5
