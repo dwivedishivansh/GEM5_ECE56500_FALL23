@@ -65,15 +65,6 @@ BaseIndexingPolicy::BaseIndexingPolicy(const Params &p)
              "of 2");
     fatal_if(assoc <= 0, "associativity must be greater than zero");
 
-    // Initialize cache sets with entries, compressed sizes, and other metadata
-    for (auto &set : sets) {
-        set.entries.resize(assoc); // Each set contains `assoc` number of entries
-        set.dataSegments.resize(assoc); // Each entry can have multiple data segments
-        set.compressedSizes.resize(assoc); // Each entry has a compressed size
-        set.compressionStatus.resize(assoc); // Each entry has compression status
-        set.coherenceStates.resize(assoc); // Each entry has coherence state
-    }
-    
     // Make space for the entries
     for (uint32_t i = 0; i < numSets; ++i) {
         sets[i].resize(assoc);
