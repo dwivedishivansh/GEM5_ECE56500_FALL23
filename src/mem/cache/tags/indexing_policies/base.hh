@@ -89,18 +89,7 @@ class BaseIndexingPolicy : public SimObject
     /**
      * The cache sets.
      */
-    //std::vector<std::vector<ReplaceableEntry*>> sets;
-    
-    // Cache set structure for DCSV
-    struct CacheSet {
-        std::vector<ReplaceableEntry*> entries;        // Tags and metadata
-        std::vector<std::vector<uint8_t>> dataSegments; // Data segments (each segment is 8 bytes)
-        std::vector<uint8_t> compressedSizes;          // Compressed size for each entry (e.g., number of segments)
-        std::vector<bool> compressionStatus;           // Compression status for each entry
-        std::vector<char> coherenceStates;             // Coherence state for each entry
-    };
-
-    std::vector<CacheSet> sets; // Cache sets with entries and metadata
+    std::vector<std::vector<ReplaceableEntry*>> sets;
 
     /**
      * The amount to shift the address to get the tag.
