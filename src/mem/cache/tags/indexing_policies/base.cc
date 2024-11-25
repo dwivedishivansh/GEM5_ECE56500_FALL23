@@ -65,10 +65,19 @@ BaseIndexingPolicy::BaseIndexingPolicy(const Params &p)
              "of 2");
     fatal_if(assoc <= 0, "associativity must be greater than zero");
 
-    // Make space for the entries
-    for (uint32_t i = 0; i < numSets; ++i) {
-        sets[i].resize(assoc);
+    // Initialize cache sets with entries, compressed sizes, and other metadata
+    for (auto &set : sets) {
+        set.entries.resize(assoc); // Each set contains `assoc` number of entries
+        set.dataSegments.resize(assoc); // Each entry can have multiple data segments
+        set.compressedSizes.resize(assoc); // Each entry has a compressed size
+        set.compressionStatus.resize(assoc); // Each entry has compression status
+        set.coherenceStates.resize(assoc); // Each entry has coherence state
     }
+    
+    // Make space for the entries
+    //for (uint32_t i = 0; i < numSets; ++i) {
+    //    sets[i].resize(assoc);
+    //}
 }
 
 ReplaceableEntry*
@@ -95,10 +104,66 @@ BaseIndexingPolicy::setEntry(ReplaceableEntry* entry, const uint64_t index)
     entry->setPosition(set, way);
 }
 
+// Set an entry pointer to its corresponding set and way
+void BaseIndexingPolicy::setEntry(ReplaceableEntry* entry, const uint64_t index)
+{
+    uint32_t set = index & setMask;        // Get the set index
+    uint32_t way = (index >> setShift) & (assoc - 1);  // Get the way index
+
+    sets[set].entries[way] = entry;        // Assign the entry to the set and way
+}
+
 Addr
 BaseIndexingPolicy::extractTag(const Addr addr) const
 {
     return (addr >> tagShift);
 }
+
+// Set the compressed size for an entry
+void BaseIndexingPolicy::setCompressedSize(uint32_t set, uint32_t way, uint8_t compressedSize)
+{
+    sets[set].compressedSizes[way] = compressedSize;  // Set the compressed size
+}
+
+// Set the compression status for an entry
+void BaseIndexingPolicy::setCompressionStatus(uint32_t set, uint32_t way, bool status)
+{
+    sets[set].compressionStatus[way] = status;  // Set the compression status
+}
+
+// Set the coherence state for an entry
+void BaseIndexingPolicy::setCoherenceState(uint32_t set, uint32_t way, char state)
+{
+    sets[set].coherenceStates[way] = state;  // Set the coherence state
+}
+
+// Print the cache's set and entry details
+std::string BaseIndexingPolicy::printCache() const
+{
+    std::string result = "";
+    for (size_t setIdx = 0; setIdx < sets.size(); ++setIdx) {
+        result += "Set " + std::to_string(setIdx) + ":\n";
+        for (size_t wayIdx = 0; wayIdx < sets[setIdx].entries.size(); ++wayIdx) {
+            result += "  Way " + std::to_string(wayIdx) + " - ";
+            result += "CSize: " + std::to_string(sets[setIdx].compressedSizes[wayIdx]) + " ";
+            result += "CStatus: " + std::to_string(sets[setIdx].compressionStatus[wayIdx]) + " ";
+            result += "Coherence: " + std::string(1, sets[setIdx].coherenceStates[wayIdx]) + "\n";
+        }
+    }
+    return result;
+}
+
+// Check if a number is a power of 2
+bool BaseIndexingPolicy::isPowerOf2(uint32_t x) const
+{
+    return (x != 0) && ((x & (x - 1)) == 0);
+}
+
+// Calculate the log base 2 of a number
+uint32_t BaseIndexingPolicy::floorLog2(uint32_t x) const
+{
+    return static_cast<uint32_t>(std::log2(x));
+}
+
 
 } // namespace gem5
