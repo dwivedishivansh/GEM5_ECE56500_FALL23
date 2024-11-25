@@ -34,6 +34,7 @@
 
 #include "base/compiler.hh"
 #include "base/cprintf.hh"
+#include <string>
 
 namespace gem5
 {
@@ -73,8 +74,29 @@ class ReplaceableEntry
      */
     uint32_t _way;
 
+    /**
+     * Compressed size of the cache line (in segments).
+     */
+    uint8_t cSize;
+
+    /**
+     * Compression status:
+     * 0: Uncompressed
+     * 1: Compressed
+     */
+    bool cStatus;
+
+    /**
+     * Coherence state:
+     * M: Modified
+     * S: Shared
+     * I: Invalid
+     * NP: Not Present
+     */
+     char coherenceState;
+
   public:
-    ReplaceableEntry() = default;
+    ReplaceableEntry() : cSize(0), cStatus(false), coherenceState('I') {}
     virtual ~ReplaceableEntry() = default;
 
     /**
@@ -111,14 +133,58 @@ class ReplaceableEntry
     uint32_t getWay() const { return _way; }
 
     /**
+     * Get the compressed size.
+     *
+     * @return The compressed size of the cache line.
+     */
+    uint8_t getCompressedSize() const { return cSize; }
+
+    /**
+     * Set the compressed size.
+     *
+     * @param size The compressed size of the cache line.
+     */
+    void setCompressedSize(uint8_t size) { cSize = size; }
+
+    /**
+     * Get the compression status.
+     *
+     * @return True if compressed, false otherwise.
+     */
+    bool getCompressionStatus() const { return cStatus; }
+
+    /**
+     * Set the compression status.
+     *
+     * @param status The compression status (true = compressed).
+     */
+    void setCompressionStatus(bool status) { cStatus = status; }
+
+    /**
+     * Get the coherence state.
+     *
+     * @return The coherence state of the cache line.
+     */
+    char getCoherenceState() const { return coherenceState; }
+
+    /**
+     * Set the coherence state.
+     *
+     * @param state The coherence state ('M', 'S', 'I', 'NP').
+     */
+    void setCoherenceState(char state) { coherenceState = state; }
+
+    /**
      * Prints relevant information about this entry.
      *
-     * @return A string containg the contents of this entry.
+     * @return A string containing the contents of this entry.
      */
     virtual std::string
     print() const
     {
-        return csprintf("set: %#x way: %#x", getSet(), getWay());
+        return csprintf("set: %#x way: %#x cSize: %u cStatus: %d coherence: %c",
+                        getSet(), getWay(), getCompressedSize(),
+                        getCompressionStatus(), getCoherenceState());
     }
 };
 
