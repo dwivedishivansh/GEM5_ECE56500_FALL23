@@ -127,6 +127,10 @@ class SetAssociative : public BaseIndexingPolicy
      */
     Addr regenerateAddr(const Addr tag, const ReplaceableEntry* entry) const
                                                                    override;
+  
+
+private:
+    Addr computeSegmentOffset(const ReplaceableEntry *entry, uint32_t segment) const;
 };
 
 } // namespace gem5
