@@ -77,6 +77,9 @@ BaseSetAssoc::tagsInit()
         // Link block to indexing policy
         indexingPolicy->setEntry(blk, blk_index);
 
+        uint32_t set = indexingPolicy->extractSet(regenerateBlkAddr(blk));
+        
+
         // Associate a data chunk to the block
         blk->data = &dataBlks[blkSize*blk_index];
 
