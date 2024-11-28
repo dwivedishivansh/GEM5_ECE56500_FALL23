@@ -75,10 +75,6 @@ class CacheBlk : public TaggedEntry
      * bit is not defined here because it is part of a TaggedEntry.
      */
 
-    // shivansh
-    size_t cSize;
-    size_t cStatus; 
-
     enum CoherenceBits : unsigned
     {
         /** write permission */
@@ -298,6 +294,11 @@ class CacheBlk : public TaggedEntry
     /** Get the number of references to this block since insertion. */
     void increaseRefCount() { _refCount++; }
 
+    void getcSize() const { return cSize; }
+
+    void getcStatus() const { return cStatus; }
+
+
     /**
      * Get the block's age, that is, the number of ticks since its insertion.
      *
@@ -477,10 +478,10 @@ class CacheBlk : public TaggedEntry
     /** Set the current tick as this block's insertion tick. */
     void setTickInserted() { _tickInserted = curTick(); }
 
+    //shivansh
     void setcSize(const size_t cSize) { cSize = cSize; }
 
     void setcStatus(const size_t cStatus) { cStatus = cStatus; }
-
 
   private:
     /** Task Id associated with this block */
@@ -500,6 +501,11 @@ class CacheBlk : public TaggedEntry
 
     /** Whether this block is an unaccessed hardware prefetch. */
     bool _prefetched = 0;
+
+    size_t cSize = 8;
+
+    size_t cStatus = 0;
+    
 };
 
 /**
