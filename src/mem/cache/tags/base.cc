@@ -106,7 +106,7 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
 
     // shivansh
     Addr blkAddr = RegenerateBlkAddr(blk);
-    int setIndex = indexingPolicy->extractSet(blkAddr); 
+    size_t setIndex = indexingPolicy->extractSet(blkAddr); 
     assert(setIndex >= 0 && setIndex < numSets); 
 
     size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
