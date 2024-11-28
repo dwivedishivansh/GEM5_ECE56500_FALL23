@@ -157,6 +157,13 @@ class BaseTags : public ClockedObject
         statistics::Scalar dataAccesses;
     } stats;
 
+    //shivansh
+    size_t *segmentUsage; // Tracks used segments per set
+    size_t *blockCount;   // Tracks block count per set
+    size_t numSets;       // Total number of sets
+    size_t maxBlocks;     // Maximum blocks per set
+    size_t maxSegments;   // Maximum segments per set (e.g., 64)
+
   public:
     typedef BaseTagsParams Params;
     BaseTags(const Params &p);
@@ -348,6 +355,25 @@ class BaseTags : public ClockedObject
      * @param visitor Visitor to call on each block.
      */
     virtual bool anyBlk(std::function<bool(CacheBlk &)> visitor) = 0;
+
+    // shivansh
+    // Get the number of used segments in a set
+    size_t getUsedSegments(size_t setIndex) const;
+
+    // Get the number of blocks in a set
+    size_t getBlockCount(size_t setIndex) const;
+
+    // Increment the number of used segments in a set
+    void incrementSegmentUsage(size_t setIndex, size_t count);
+
+    // Increment the block count in a set
+    void incrementBlockCount(size_t setIndex);
+
+    // Decrement the number of used segments in a set (optional for eviction)
+    void decrementSegmentUsage(size_t setIndex, size_t count);
+
+    // Decrement the block count in a set (optional for eviction)
+    void decrementBlockCount(size_t setIndex);
 
   private:
     /**
