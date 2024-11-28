@@ -148,6 +148,33 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     stats.dataAccesses += 1;
 }
 
+size_t BaseTags::getUsedSegments(size_t setIndex) const {
+    return segmentUsage[setIndex];
+}
+
+size_t BaseTags::getBlockCount(size_t setIndex) const {
+    return blockCount[setIndex];
+}
+
+void BaseTags::incrementSegmentUsage(size_t setIndex, size_t count) {
+    assert(segmentUsage[setIndex] + count <= maxSegments);
+    segmentUsage[setIndex] += count;
+}
+
+void BaseTags::incrementBlockCount(size_t setIndex) {
+    assert(blockCount[setIndex] < maxBlocks);
+    blockCount[setIndex]++;
+}
+
+void BaseTags::decrementSegmentUsage(size_t setIndex, size_t count) {
+    assert(segmentUsage[setIndex] >= count);
+    segmentUsage[setIndex] -= count;
+}
+
+void BaseTags::decrementBlockCount(size_t setIndex) {
+    assert(blockCount[setIndex] > 0);
+    blockCount[setIndex]--;
+}
 
 void
 BaseTags::moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk)
