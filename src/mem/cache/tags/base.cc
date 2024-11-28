@@ -105,7 +105,6 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     assert(!blk->isValid());
 
     // shivansh
-    assert(cache != nullptr);
     Addr blkAddr = RegenerateBlkAddr(blk);
     int setIndex = indexingPolicy->extractSet(blkAddr); 
     assert(setIndex >= 0 && setIndex < numSets); 
