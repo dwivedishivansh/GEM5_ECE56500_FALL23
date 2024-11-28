@@ -66,6 +66,7 @@ namespace gem5
 class System;
 class IndexingPolicy;
 class ReplaceableEntry;
+class BaseCache; 
 
 /**
  * A common base class of Cache tagstore objects.
