@@ -124,8 +124,8 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     size_t setIndex = indexingPolicy->extractSet(blkAddr); 
     assert(setIndex >= 0 && setIndex < (p.size/256)); 
 
+    size_t wayIndex = getBlockCount(setIndex);     // Number of blocks in this set
     size_t usedSegments = getUsedSegments(setIndex, wayIndex); // Used segments in this set
-    size_t blockCount = getBlockCount(setIndex);     // Number of blocks in this set
     
     size_t cSize = compress(pkt->getData()); // Returns compressed size in segments (1-8)
     assert(cSize > 0 && cSize <= 8); // Ensure valid compression size
