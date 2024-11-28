@@ -68,6 +68,10 @@ BaseTags::BaseTags(const Params &p)
       dataBlks(new uint8_t[p.size]), // Allocate data storage in one big chunk
       stats(*this)
 {
+    //shivansh
+    segmentUsage = new size_t[(p.size/256)];
+    blockCount = new size_t[(p.num_sets/256)];
+    
     registerExitCallback([this]() { cleanupRefs(); });
 }
 
@@ -105,21 +109,20 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     assert(!blk->isValid());
 
     // shivansh
-    Addr blkAddr = RegenerateBlkAddr(blk);
+    Addr blkAddr = cache->RegenerateBlkAddr(blk);
     size_t setIndex = indexingPolicy->extractSet(blkAddr); 
-    assert(setIndex >= 0 && setIndex < numSets); 
+    assert(setIndex >= 0 && setIndex < (p.size/256)); 
 
     size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
     size_t blockCount = getBlockCount(setIndex);     // Number of blocks in this set
-
     
     size_t cSize = compress(pkt->getData()); // Returns compressed size in segments (1-8)
     assert(cSize > 0 && cSize <= 8); // Ensure valid compression size
 
-    size_t remainingSegments = maxSegments - usedSegments; // maxSegments = 64 (8 blocks × 8 segments)
+    size_t remainingSegments = 32 - usedSegments; // maxSegments =  32
 
     // Check if there is enough space in the set
-    if (remainingSegments < cSize || blockCount >= maxBlocks) {
+    if (remainingSegments < cSize || blockCount > 8) {
         DPRINTF(Cache, "Not enough space in set %d for compressed block insertion\n", setIndex);
         return;
     }
