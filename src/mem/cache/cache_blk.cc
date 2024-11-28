@@ -47,7 +47,7 @@ namespace gem5
 {
 
 void
-CacheBlk::insert(const Addr tag, const bool is_secure,
+CacheBlk::insert(const Addr tag, const bool is_secure, const size_t cSize, const size_t cStatus,
                  const int src_requestor_ID, const uint32_t task_ID)
 {
     // Make sure that the block has been properly invalidated
@@ -66,6 +66,10 @@ CacheBlk::insert(const Addr tag, const bool is_secure,
 
     // Insertion counts as a reference to the block
     increaseRefCount();
+
+    //shivansh
+    setcSize(cSize);
+    setcStatus(cStatus);
 }
 
 void
