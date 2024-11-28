@@ -50,6 +50,7 @@
 #include "base/types.hh"
 #include "mem/cache/replacement_policies/replaceable_entry.hh"
 #include "mem/cache/tags/indexing_policies/base.hh"
+#include "mem/cache/base.hh"
 #include "mem/request.hh"
 #include "sim/core.hh"
 #include "sim/sim_exit.hh"
@@ -63,7 +64,7 @@ BaseTags::BaseTags(const Params &p)
       size(p.size), lookupLatency(p.tag_latency),
       system(p.system), indexingPolicy(p.indexing_policy),
       warmupBound((p.warmup_percentage/100.0) * (p.size / p.block_size)),
-      warmedUp(false), numBlocks(p.size / p.block_size),
+      warmedUp(false), numBlocks(p.size / (2 * p.block_size)),                       //shivansh
       dataBlks(new uint8_t[p.size]), // Allocate data storage in one big chunk
       stats(*this)
 {
@@ -98,42 +99,16 @@ BaseTags::findBlock(Addr addr, bool is_secure) const
     return nullptr;
 }
 
-void
-BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
-{
-    assert(!blk->isValid());
-
-    // Previous block, if existed, has been removed, and now we have
-    // to insert the new one
-
-    // Deal with what we are bringing in
-    RequestorID requestor_id = pkt->req->requestorId();
-    assert(requestor_id < system->maxRequestors());
-    stats.occupancies[requestor_id]++;
-
-    // Insert block with tag, src requestor id and task id
-    blk->insert(extractTag(pkt->getAddr()), pkt->isSecure(), requestor_id,
-                pkt->req->taskId());
-
-    // Check if cache warm up is done
-    if (!warmedUp && stats.tagsInUse.value() >= warmupBound) {
-        warmedUp = true;
-        stats.warmupTick = curTick();
-    }
-
-    // We only need to write into one tag and one data block.
-    stats.tagAccesses += 1;
-    stats.dataAccesses += 1;
-}
 
 void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
 {
     assert(!blk->isValid());
 
     // shivansh
+    assert(cache != nullptr);
     Addr blkAddr = RegenerateBlkAddr(blk);
-    int setIndex = extractSet(blkAddr); // Get the index of the set
-    assert(setIndex >= 0 && setIndex < numSets); // Ensure valid set index
+    int setIndex = indexingPolicy->extractSet(blkAddr); 
+    assert(setIndex >= 0 && setIndex < numSets); 
 
     size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
     size_t blockCount = getBlockCount(setIndex);     // Number of blocks in this set
