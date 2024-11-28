@@ -477,6 +477,11 @@ class CacheBlk : public TaggedEntry
     /** Set the current tick as this block's insertion tick. */
     void setTickInserted() { _tickInserted = curTick(); }
 
+    void setcSize(const size_t cSize) { cSize = cSize; }
+
+    void setcStatus(const size_t cStatus) { cStatus = cStatus; }
+
+
   private:
     /** Task Id associated with this block */
     uint32_t _taskId = 0;
