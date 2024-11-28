@@ -69,7 +69,18 @@ BaseTags::BaseTags(const Params &p)
       stats(*this)
 {
     //shivansh
-    segmentUsage = new size_t[(p.size/256)];
+    //segmentUsage = new size_t[(p.size/256)];
+    size_t numSets = p.size / 256; // Each set is 256 bytes
+
+    // Allocate the top-level array for sets
+    segmentUsage = new size_t*[numSets];
+
+    // Allocate space for each set's ways
+    for (size_t i = 0; i < numSets; ++i) {
+        segmentUsage[i] = new size_t[8](); 
+        
+}
+
     blockCount = new size_t[(p.num_sets/256)];
     
     registerExitCallback([this]() { cleanupRefs(); });
