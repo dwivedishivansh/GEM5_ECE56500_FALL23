@@ -71,6 +71,9 @@ class BaseTags(ClockedObject):
     # Set the indexing entry size as the block size
     entry_size = Param.Int(Parent.cache_line_size,
                            "Indexing entry size in bytes")
+    //shivansh
+    segment_usage = Param.Int(0, "Initial segment usage per set")
+    block_count = Param.Int(0, "Initial block count per set")
 
 class BaseSetAssoc(BaseTags):
     type = 'BaseSetAssoc'
