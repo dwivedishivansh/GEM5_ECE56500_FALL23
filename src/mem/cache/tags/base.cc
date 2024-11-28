@@ -135,7 +135,7 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     assert(requestor_id < system->maxRequestors());
     stats.occupancies[requestor_id]++;
 
-    blk->insert(extractTag(pkt->getAddr()), pkt->isSecure(), requestor_id,
+    blk->insert(extractTag(pkt->getAddr()), pkt->isSecure(), cSize, cStatus, requestor_id,
                 pkt->req->taskId());
     
     //shivansh
