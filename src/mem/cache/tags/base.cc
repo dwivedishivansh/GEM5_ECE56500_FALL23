@@ -113,7 +113,7 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     size_t setIndex = indexingPolicy->extractSet(blkAddr); 
     assert(setIndex >= 0 && setIndex < (p.size/256)); 
 
-    size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
+    size_t usedSegments = getUsedSegments(setIndex, wayIndex); // Used segments in this set
     size_t blockCount = getBlockCount(setIndex);     // Number of blocks in this set
     
     size_t cSize = compress(pkt->getData()); // Returns compressed size in segments (1-8)
@@ -122,12 +122,12 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     size_t remainingSegments = 32 - usedSegments; // maxSegments =  32
 
     // Check if there is enough space in the set
-    if (remainingSegments < cSize || blockCount >= 8) {
+    if (remainingSegments < cSize || blockCount > 8) {
         DPRINTF(Cache, "Not enough space in set %d for compressed block insertion\n", setIndex);
         return;
     }
 
-    incrementSegmentUsage(setIndex, cSize); // Update used segments
+    incrementSegmentUsage(setIndex, wayIndex, cSize); // Update used segments
     incrementBlockCount(setIndex);          // Update block count
 
     // Deal with what we are bringing in
@@ -155,7 +155,7 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
 size_t BaseTags::getUsedSegments(size_t setIndex, size_t wayIndex) const {
     size_t totalSegments = 0;
     
-    for (size_t way = 0; way <= wayIndex; ++way) {
+    for (size_t way = 0; way < wayIndex; ++way) {
         totalSegments += segmentUsage[setIndex][way];
     }
 
@@ -166,10 +166,11 @@ size_t BaseTags::getBlockCount(size_t setIndex) const {
     return blockCount[setIndex];
 }
 
-void BaseTags::incrementSegmentUsage(size_t setIndex, size_t count) {
-    assert(segmentUsage[setIndex] + count <= maxSegments);
-    segmentUsage[setIndex] += count;
+void BaseTags::incrementSegmentUsage(size_t setIndex, size_t wayIndex, size_t count) {
+    assert(segmentUsage[setIndex][wayIndex] + count <= 32);
+    segmentUsage[setIndex][wayIndex] += count;
 }
+
 
 void BaseTags::incrementBlockCount(size_t setIndex) {
     assert(blockCount[setIndex] < maxBlocks);
