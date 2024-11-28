@@ -74,6 +74,11 @@ class CacheBlk : public TaggedEntry
      * Cache block's enum listing the supported coherence bits. The valid
      * bit is not defined here because it is part of a TaggedEntry.
      */
+
+    // shivansh
+    size_t cSize;
+    size_t cStatus; 
+
     enum CoherenceBits : unsigned
     {
         /** write permission */
