@@ -152,8 +152,14 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     stats.dataAccesses += 1;
 }
 
-size_t BaseTags::getUsedSegments(size_t setIndex) const {
-    return segmentUsage[setIndex];
+size_t BaseTags::getUsedSegments(size_t setIndex, size_t wayIndex) const {
+    size_t totalSegments = 0;
+    
+    for (size_t way = 0; way <= wayIndex; ++way) {
+        totalSegments += segmentUsage[setIndex][way];
+    }
+
+    return totalSegments;
 }
 
 size_t BaseTags::getBlockCount(size_t setIndex) const {
