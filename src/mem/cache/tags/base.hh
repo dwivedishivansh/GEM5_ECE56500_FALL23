@@ -159,11 +159,8 @@ class BaseTags : public ClockedObject
     } stats;
 
     //shivansh
-    size_t *segmentUsage; // Tracks used segments per set
+    size_t **segmentUsage; // Tracks used segments per set
     size_t *blockCount;   // Tracks block count per set
-    size_t numSets;       // Total number of sets
-    size_t maxBlocks;     // Maximum blocks per set
-    size_t maxSegments;   // Maximum segments per set (e.g., 64)
 
   public:
     typedef BaseTagsParams Params;
