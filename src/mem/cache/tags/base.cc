@@ -126,6 +126,55 @@ BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     stats.dataAccesses += 1;
 }
 
+void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
+{
+    assert(!blk->isValid());
+
+    // shivansh
+    Addr blkAddr = RegenerateBlkAddr(blk);
+    int setIndex = extractSet(blkAddr); // Get the index of the set
+    assert(setIndex >= 0 && setIndex < numSets); // Ensure valid set index
+
+    size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
+    size_t blockCount = getBlockCount(setIndex);     // Number of blocks in this set
+
+    
+    size_t cSize = compress(pkt->getData()); // Returns compressed size in segments (1-8)
+    assert(cSize > 0 && cSize <= 8); // Ensure valid compression size
+
+    size_t remainingSegments = maxSegments - usedSegments; // maxSegments = 64 (8 blocks × 8 segments)
+
+    // Check if there is enough space in the set
+    if (remainingSegments < cSize || blockCount >= maxBlocks) {
+        DPRINTF(Cache, "Not enough space in set %d for compressed block insertion\n", setIndex);
+        return;
+    }
+
+    // Update segment usage and block count for this set
+    incrementSegmentUsage(setIndex, cSize); // Update used segments
+    incrementBlockCount(setIndex);          // Update block count
+
+    // Deal with what we are bringing in
+    RequestorID requestor_id = pkt->req->requestorId();
+    assert(requestor_id < system->maxRequestors());
+    stats.occupancies[requestor_id]++;
+
+    blk->insert(extractTag(pkt->getAddr()), pkt->isSecure(), requestor_id,
+                pkt->req->taskId());
+    blk->data = &dataBlks[setIndex * 256 + usedSegments * 8];  
+
+    // Check if cache warm-up is done
+    if (!warmedUp && stats.tagsInUse.value() >= warmupBound) {
+        warmedUp = true;
+        stats.warmupTick = curTick();
+    }
+
+    // We only need to write into one tag and one data block
+    stats.tagAccesses += 1;
+    stats.dataAccesses += 1;
+}
+
+
 void
 BaseTags::moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk)
 {
