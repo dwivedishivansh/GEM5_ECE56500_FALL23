@@ -101,51 +101,8 @@ BaseIndexingPolicy::extractTag(const Addr addr) const
     return (addr >> tagShift);
 }
 
-// Set the compressed size for an entry
-void BaseIndexingPolicy::setCompressedSize(uint32_t set, uint32_t way, uint8_t compressedSize)
-{
-    sets[set].compressedSizes[way] = compressedSize;  // Set the compressed size
-}
 
-// Set the compression status for an entry
-void BaseIndexingPolicy::setCompressionStatus(uint32_t set, uint32_t way, bool status)
-{
-    sets[set].compressionStatus[way] = status;  // Set the compression status
-}
 
-// Set the coherence state for an entry
-void BaseIndexingPolicy::setCoherenceState(uint32_t set, uint32_t way, char state)
-{
-    sets[set].coherenceStates[way] = state;  // Set the coherence state
-}
-
-// Print the cache's set and entry details
-std::string BaseIndexingPolicy::printCache() const
-{
-    std::string result = "";
-    for (size_t setIdx = 0; setIdx < sets.size(); ++setIdx) {
-        result += "Set " + std::to_string(setIdx) + ":\n";
-        for (size_t wayIdx = 0; wayIdx < sets[setIdx].entries.size(); ++wayIdx) {
-            result += "  Way " + std::to_string(wayIdx) + " - ";
-            result += "CSize: " + std::to_string(sets[setIdx].compressedSizes[wayIdx]) + " ";
-            result += "CStatus: " + std::to_string(sets[setIdx].compressionStatus[wayIdx]) + " ";
-            result += "Coherence: " + std::string(1, sets[setIdx].coherenceStates[wayIdx]) + "\n";
-        }
-    }
-    return result;
-}
-
-// Check if a number is a power of 2
-bool BaseIndexingPolicy::isPowerOf2(uint32_t x) const
-{
-    return (x != 0) && ((x & (x - 1)) == 0);
-}
-
-// Calculate the log base 2 of a number
-uint32_t BaseIndexingPolicy::floorLog2(uint32_t x) const
-{
-    return static_cast<uint32_t>(std::log2(x));
-}
 
 
 } // namespace gem5
