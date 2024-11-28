@@ -122,12 +122,11 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     size_t remainingSegments = 32 - usedSegments; // maxSegments =  32
 
     // Check if there is enough space in the set
-    if (remainingSegments < cSize || blockCount > 8) {
+    if (remainingSegments < cSize || blockCount >= 8) {
         DPRINTF(Cache, "Not enough space in set %d for compressed block insertion\n", setIndex);
         return;
     }
 
-    // Update segment usage and block count for this set
     incrementSegmentUsage(setIndex, cSize); // Update used segments
     incrementBlockCount(setIndex);          // Update block count
 
@@ -138,6 +137,8 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
 
     blk->insert(extractTag(pkt->getAddr()), pkt->isSecure(), requestor_id,
                 pkt->req->taskId());
+    
+    //shivansh
     blk->data = &dataBlks[setIndex * 256 + usedSegments * 8];  
 
     // Check if cache warm-up is done
