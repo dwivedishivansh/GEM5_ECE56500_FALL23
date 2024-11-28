@@ -75,11 +75,4 @@ SetAssociative::getPossibleEntries(const Addr addr) const
     return sets[extractSet(addr)];
 }
 
-Addr 
-SetAssociative::computeSegmentOffset(const ReplaceableEntry *entry, uint32_t segment) 
-const 
-{
-        return entry->getCompressedSize() * segment * 8; // Offset in bytes
-}
-
 } // namespace gem5
