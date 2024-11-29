@@ -266,6 +266,14 @@ class BaseTags : public ClockedObject
         stats.sampledRefs++;
 
         blk->invalidate();
+
+        //shivansh
+        Addr blkAddr = cache->RegenerateBlkAddr(blk);
+        size_t setIndex = indexingPolicy->extractSet(blkAddr); 
+        assert(setIndex >= 0 && setIndex < numSets); 
+        size_t usedSegments = getUsedSegments(setIndex);
+        size_t cSize = blk->getcSize();
+        decrementSegmentUsage(setIndex, cSize);   
     }
 
     /**
