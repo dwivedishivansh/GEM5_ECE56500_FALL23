@@ -81,7 +81,7 @@ BaseTags::BaseTags(const Params &p)
         
 }
 
-    blockCount = new size_t[(p.size/256)];
+    blockCount = new size_t[numSets];
     
     registerExitCallback([this]() { cleanupRefs(); });
 }
