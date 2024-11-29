@@ -73,14 +73,7 @@ BaseTags::BaseTags(const Params &p)
     size_t numSets = p.size / 256; // Each set is 256 bytes
 
     // Allocate the top-level array for sets
-    segmentUsage = new size_t*[numSets];
-
-    // Allocate space for each set's ways
-    for (size_t i = 0; i < numSets; ++i) {
-        segmentUsage[i] = new size_t[8](); 
-        
-}
-
+    segmentUsage = new size_t[numSets];
     blockCount = new size_t[numSets];
     
     registerExitCallback([this]() { cleanupRefs(); });
@@ -122,10 +115,9 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     // shivansh
     Addr blkAddr = cache->RegenerateBlkAddr(blk);
     size_t setIndex = indexingPolicy->extractSet(blkAddr); 
-    assert(setIndex >= 0 && setIndex < (p.size/256)); 
+    assert(setIndex >= 0 && setIndex < numSets); 
 
-    size_t wayIndex = getBlockCount(setIndex);     // Number of blocks in this set
-    size_t usedSegments = getUsedSegments(setIndex, wayIndex); // Used segments in this set
+    size_t usedSegments = getUsedSegments(setIndex); // Used segments in this set
     
     size_t cSize = compress(pkt->getData()); // Returns compressed size in segments (1-8)
     assert(cSize > 0 && cSize <= 8); // Ensure valid compression size
@@ -138,7 +130,7 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
         return;
     }
 
-    incrementSegmentUsage(setIndex, wayIndex, cSize); // Update used segments
+    incrementSegmentUsage(setIndex, cSize); // Update used segments
     incrementBlockCount(setIndex);          // Update block count
 
     // Deal with what we are bringing in
@@ -163,11 +155,11 @@ void BaseTags::insertBlock(const PacketPtr pkt, CacheBlk *blk)
     stats.dataAccesses += 1;
 }
 
-size_t BaseTags::getUsedSegments(size_t setIndex, size_t wayIndex) const {
+size_t BaseTags::getUsedSegments(size_t setIndex) const {
     size_t totalSegments = 0;
     
     for (size_t way = 0; way < wayIndex; ++way) {
-        totalSegments += segmentUsage[setIndex][way];
+        totalSegments += segmentUsage[way];
     }
 
     return totalSegments;
@@ -177,9 +169,9 @@ size_t BaseTags::getBlockCount(size_t setIndex) const {
     return blockCount[setIndex];
 }
 
-void BaseTags::incrementSegmentUsage(size_t setIndex, size_t wayIndex, size_t count) {
-    assert(segmentUsage[setIndex][wayIndex] + count <= 32);
-    segmentUsage[setIndex][wayIndex] += count;
+void BaseTags::incrementSegmentUsage(size_t setIndex, size_t count) {
+    assert(segmentUsage[setIndex] + count <= 32);
+    segmentUsage[setIndex] += count;
 }
 
 
