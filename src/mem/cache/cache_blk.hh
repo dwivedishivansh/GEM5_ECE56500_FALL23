@@ -473,26 +473,26 @@ class CacheBlk : public TaggedEntry
     /**
      * Set compression bit.
      */
-    void setCStatus();
+    void setCompressed();
 
     /**
      * Clear compression bit.
      */
-    void setCStatus();
+    void setUncompressed();
 
     /*
      * Get size, in bits, of this compressed block's data.
      *
      * @return The compressed size.
      */
-    std::size_t getCSizeBits() const;
+    std::size_t getCSize() const;
 
     /**
      * Set size, in bits, of this compressed block's data.
      *
      * @param The compressed size.
      */
-    void setCSizeBits(const std::size_t size);
+    void setCSize(const std::size_t size);
 
     /**
      * Get number of cycles needed to decompress this block.
