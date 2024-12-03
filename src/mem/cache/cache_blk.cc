@@ -127,13 +127,13 @@ CacheBlk::setCSize(const std::size_t size)
 Cycles
 CacheBlk::getDecompressionLatency() const
 {
-    return _decompressionLatency;
+    return decompressionLatency;
 }
 
 void
 CacheBlk::setDecompressionLatency(const Cycles lat)
 {
-    _decompressionLatency = lat;
+    decompressionLatency = lat;
 }
 
 } // namespace gem5
