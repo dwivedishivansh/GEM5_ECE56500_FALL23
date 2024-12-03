@@ -112,13 +112,11 @@ class CacheBlk : public TaggedEntry
 
     std::size_t cSize = 0;
 
-    int cStatus;
+    bool cStatus;
 
-    uint8_t cFactor;
+    uint8_t compressionFactor;
 
-    Cycles decompLatency;
-
-    Tick lastTouch;
+    Cycles decompressionLatency;
 
   protected:
     /**
@@ -465,29 +463,51 @@ class CacheBlk : public TaggedEntry
 
     // dvsc
 
-    void setCSize(std::size_t size) {
-        cSize = size;
-    }
-    
-    std::size_t getCSize() const {
-        return cSize;
-    }
+    /**
+     * Check if this block holds compressed data.
+     *
+     * @return True if the block holds compressed data.
+     */
+    bool isCompressed() const;
 
-    void setCStatus(int status) {
-        cStatus = status;
-    }
-    
-    int getCStatus() const {
-        return cStatus;
-    }
+    /**
+     * Set compression bit.
+     */
+    void setCStatus();
 
-    void setDecompLatency(unsigned int latency) {
-        decompLatency = latency;
-    }
-    
-    unsigned int getDecompLatency() const {
-        return decompLatency;
-    }
+    /**
+     * Clear compression bit.
+     */
+    void setCStatus();
+
+    /*
+     * Get size, in bits, of this compressed block's data.
+     *
+     * @return The compressed size.
+     */
+    std::size_t getCSizeBits() const;
+
+    /**
+     * Set size, in bits, of this compressed block's data.
+     *
+     * @param The compressed size.
+     */
+    void setCSizeBits(const std::size_t size);
+
+    /**
+     * Get number of cycles needed to decompress this block.
+     *
+     * @return Decompression latency.
+     */
+    Cycles getDecompressionLatency() const;
+
+    /**
+     * Set number of cycles needed to decompress this block.
+     *
+     * @param Decompression latency.
+     */
+    void setDecompressionLatency(const Cycles lat);
+
 
   protected:
     /** The current coherence status of this block. @sa CoherenceBits */
