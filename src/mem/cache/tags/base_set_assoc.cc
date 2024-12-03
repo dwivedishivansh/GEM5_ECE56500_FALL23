@@ -109,4 +109,80 @@ BaseSetAssoc::moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk)
     replacementPolicy->reset(dest_blk->replacementData);
 }
 
+CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
+                        const bool is_secure,
+                        const std::size_t req_size,
+                        std::vector<CacheBlk*>& evicts,
+                        bool update_expansion)
+{
+    // Retrieve possible blocks to be evicted
+    const std::vector<ReplaceableEntry*> blocks = indexingPolicy->getPossibleEntries(addr);
+    Addr tag = extractTag(addr);
+    unsigned segments = 0;
+    CacheBlk* victim = nullptr;
+    CacheBlk* update_blk = nullptr;
+    std::vector<ReplaceableEntry*> valid_blocks;
+
+    // Process all blocks in the cache set
+    for (const auto& block : blocks) {
+        CacheBlk* cache_blk = static_cast<CacheBlk*>(block);
+
+        if (cache_blk->isValid()) {
+            // If the block needs updating, set it as victim
+            if (cache_blk->matchTag(tag, is_secure) && update_expansion) {
+                update_blk = cache_blk;
+                victim = update_blk;
+            }
+            // Otherwise, add valid blocks to the list and update the set size
+            else {
+                valid_blocks.push_back(block);
+                segments += (cache_blk->cSize / 64);  // Convert size to segments
+            }
+        } else {
+            // Invalid block, can immediately be evicted
+            victim = cache_blk;
+            evicts.push_back(victim);
+        }
+    }
+
+    // Max set size in segments
+    unsigned max_set_segments = 32;
+
+    // Calculate remaining space needed in segments
+    int extra_segments = req_size / 64 - (max_set_segments - segments);
+
+    // If not enough space or no victim found, use LRU for selection
+    if (extra_segments > 0 || !victim) {
+        victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(valid_blocks));
+        evicts.push_back(victim);
+    }
+
+    extra_segments -= (victim->cSize / 64);
+
+    // If still not enough space, find larger valid blocks to evict
+    if (extra_segments > 0) {
+        std::vector<ReplaceableEntry*> large_blocks;
+
+        // Find valid blocks large enough to meet the space requirement
+        for (const auto& block : valid_blocks) {
+            CacheBlk* cache_blk = static_cast<CacheBlk*>(block);
+            if ((cache_blk->cSize / 64) >= extra_segments && cache_blk != victim) {
+                large_blocks.push_back(block);
+            }
+        }
+
+        // Evict from the filtered list if necessary
+        if (!large_blocks.empty()) {
+            victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(large_blocks));
+            evicts.push_back(victim);
+        }
+    }
+
+    extra_segments -= (victim->cSize / 64);
+    assert(extra_segments <= 0);
+
+    // Return the block being updated, or the selected victim
+    return (update_blk) ? update_blk : victim;
+}
+
 } // namespace gem5
