@@ -183,6 +183,11 @@ class BaseSetAssoc : public BaseTags
         return victim;
     }
 
+    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
+                     const std::size_t req_size,
+                     std::vector<CacheBlk*>& evicts,
+                     bool update_expansion=false) override;
+
     /**
      * Insert the new block into the cache and update replacement data.
      *
