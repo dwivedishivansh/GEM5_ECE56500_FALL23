@@ -108,6 +108,18 @@ class CacheBlk : public TaggedEntry
      */
     Tick whenReady = 0;
 
+    // dvsc
+
+    std::size_t cSize = 0;
+
+    int cStatus;
+
+    uint8_t cFactor;
+
+    Cycles decompLatency;
+
+    Tick lastTouch;
+
   protected:
     /**
      * Represents that the indicated thread context has a "lock" on
@@ -449,6 +461,32 @@ class CacheBlk : public TaggedEntry
             clearLoadLocks(req);
             return true;
         }
+    }
+
+    // dvsc
+
+    void setCSize(std::size_t size) {
+        cSize = size;
+    }
+    
+    std::size_t getCSize() const {
+        return cSize;
+    }
+
+    void setCStatus(int status) {
+        cStatus = status;
+    }
+    
+    int getCStatus() const {
+        return cStatus;
+    }
+
+    void setDecompLatency(unsigned int latency) {
+        decompLatency = latency;
+    }
+    
+    unsigned int getDecompLatency() const {
+        return decompLatency;
     }
 
   protected:
