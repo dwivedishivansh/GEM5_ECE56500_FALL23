@@ -79,4 +79,61 @@ CacheBlkPrintWrapper::print(std::ostream &os, int verbosity,
              blk->isSecure()   ? 'S' : '-');
 }
 
+bool
+CacheBlk::isCompressed() const
+{
+    return cStatus;
+}
+
+void
+CacheBlk::setCompressed()
+{
+    cStatus = true;
+}
+
+void
+CacheBlk::setUncompressed()
+{
+    cStatus = false;
+}
+
+std::size_t
+CacheBlk::getCSize() const
+{
+    return cSize;
+}
+
+void
+CacheBlk::setCSize(const std::size_t size)
+{
+    cSize = size; 
+    std::size_t cSizeB = std::ceil(double(bits) / 8);
+  
+    const std::size_t blk_size_bits = CHAR_BIT * (tags-> blkSize);
+    const std::size_t compression_factor = (size > blk_size_bits) ? 1 :
+    ((size == 0) ? blk_size_bits : alignToPowerOfTwo(std::floor(double(blk_size_bits) / size)));
+  
+    compressionFactor = compression_factor;
+
+    if (compression_factor != 1) {
+        setCompressed();
+    } else {
+        setUncompressed();
+      }
+}
+      
+}
+
+Cycles
+CacheBlk::getDecompressionLatency() const
+{
+    return _decompressionLatency;
+}
+
+void
+CacheBlk::setDecompressionLatency(const Cycles lat)
+{
+    _decompressionLatency = lat;
+}
+
 } // namespace gem5
