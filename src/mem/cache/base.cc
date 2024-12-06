@@ -985,7 +985,6 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
     if (compressor && predictor) {
         const auto comp_data = compressor->compress(data, compression_lat, decompression_lat);
         compression_size = comp_data->getSizeBits();
-        compression_size = (compression_size + 63) & ~63;
         if (compression_size < blkSize * CHAR_BIT) {
             decompression_lat = Cycles(5);
         }
@@ -1567,7 +1566,6 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
         const auto comp_data = compressor->compress(
             pkt->getConstPtr<uint64_t>(), compression_lat, decompression_lat);
         blk_size_bits = comp_data->getSizeBits();
-        blk_size_bits = (blk_size_bits + 63) & ~63;
         if (blk_size_bits < blkSize*CHAR_BIT){
                 decompression_lat = Cycles(5);
             }
