@@ -127,9 +127,9 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
     if (prefetcher)
         prefetcher->setCache(this);
 
-    fatal_if(compressor && !dynamic_cast<CompressedTags*>(tags),
-        "The tags of compressed cache %s must derive from CompressedTags",
-        name());
+    //fatal_if(compressor && !dynamic_cast<CompressedTags*>(tags),
+    //    "The tags of compressed cache %s must derive from CompressedTags",
+    //    name());
     warn_if(!compressor && dynamic_cast<CompressedTags*>(tags),
         "Compressed cache %s does not have a compression algorithm", name());
     if (compressor)
@@ -973,112 +973,53 @@ BaseCache::handleEvictions(std::vector<CacheBlk*> &evict_blks,
 }
 
 bool
-BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data,
-                                 PacketList &writebacks)
-{
-    // tempBlock does not exist in the tags, so don't do anything for it.
+BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketList &writebacks) {
     if (blk == tempBlock) {
         return true;
     }
 
-    // The compressor is called to compress the updated data, so that its
-    // metadata can be updated.
     Cycles compression_lat = Cycles(0);
     Cycles decompression_lat = Cycles(0);
-    const auto comp_data =
-        compressor->compress(data, compression_lat, decompression_lat);
-    std::size_t compression_size = comp_data->getSizeBits();
+    std::size_t compression_size;
 
-    // Get previous compressed size
-    CompressionBlk* compression_blk = static_cast<CompressionBlk*>(blk);
-    [[maybe_unused]] const std::size_t prev_size =
-        compression_blk->getSizeBits();
-
-    // If compressed size didn't change enough to modify its co-allocatability
-    // there is nothing to do. Otherwise we may be facing a data expansion
-    // (block passing from more compressed to less compressed state), or a
-    // data contraction (less to more).
-    bool is_data_expansion = false;
-    bool is_data_contraction = false;
-    const CompressionBlk::OverwriteType overwrite_type =
-        compression_blk->checkExpansionContraction(compression_size);
-    std::string op_name = "";
-    if (overwrite_type == CompressionBlk::DATA_EXPANSION) {
-        op_name = "expansion";
-        is_data_expansion = true;
-    } else if ((overwrite_type == CompressionBlk::DATA_CONTRACTION) &&
-        moveContractions) {
-        op_name = "contraction";
-        is_data_contraction = true;
+    if (compressor && predictor) {
+        const auto comp_data = compressor->compress(data, compression_lat, decompression_lat);
+        compression_size = comp_data->getSizeBits();
+        compression_size = (compression_size + 63) & ~63;
+        if (compression_size < blkSize * CHAR_BIT) {
+            decompression_lat = Cycles(5);
+        }
+    } else {
+        compression_size = blkSize * CHAR_BIT;
     }
 
-    // If block changed compression state, it was possibly co-allocated with
-    // other blocks and cannot be co-allocated anymore, so one or more blocks
-    // must be evicted to make room for the expanded/contracted block
+    const std::size_t prev_size = blk->cSize;
+    bool is_data_expansion = prev_size < compression_size;
+    bool is_data_contraction = prev_size > compression_size;
+
+    CacheBlk *victim = blk;
     std::vector<CacheBlk*> evict_blks;
-    if (is_data_expansion || is_data_contraction) {
-        std::vector<CacheBlk*> evict_blks;
-        bool victim_itself = false;
-        CacheBlk *victim = nullptr;
-        if (replaceExpansions || is_data_contraction) {
-            victim = tags->findVictim(regenerateBlkAddr(blk),
-                blk->isSecure(), compression_size, evict_blks);
 
-            // It is valid to return nullptr if there is no victim
-            if (!victim) {
-                return false;
-            }
+    if (is_data_expansion) {
+        victim = tags->findVictimVariableSegment(regenerateBlkAddr(blk), blk->isSecure(), compression_size, evict_blks, true);
 
-            // If the victim block is itself the block won't need to be moved,
-            // and the victim should not be evicted
-            if (blk == victim) {
-                victim_itself = true;
-                auto it = std::find_if(evict_blks.begin(), evict_blks.end(),
-                    [&blk](CacheBlk* evict_blk){ return evict_blk == blk; });
-                evict_blks.erase(it);
-            }
-
-            // Print victim block's information
-            DPRINTF(CacheRepl, "Data %s replacement victim: %s\n",
-                op_name, victim->print());
-        } else {
-            // If we do not move the expanded block, we must make room for
-            // the expansion to happen, so evict every co-allocated block
-            const SuperBlk* superblock = static_cast<const SuperBlk*>(
-                compression_blk->getSectorBlock());
-            for (auto& sub_blk : superblock->blks) {
-                if (sub_blk->isValid() && (blk != sub_blk)) {
-                    evict_blks.push_back(sub_blk);
-                }
-            }
-        }
-
-        // Try to evict blocks; if it fails, give up on update
-        if (!handleEvictions(evict_blks, writebacks)) {
+        if (!victim) {
             return false;
         }
 
-        DPRINTF(CacheComp, "Data %s: [%s] from %d to %d bits\n",
-                op_name, blk->print(), prev_size, compression_size);
-
-        if (!victim_itself && (replaceExpansions || is_data_contraction)) {
-            // Move the block's contents to the invalid block so that it now
-            // co-allocates with the other existing superblock entry
-            tags->moveBlock(blk, victim);
-            blk = victim;
-            compression_blk = static_cast<CompressionBlk*>(blk);
+        if (!handleEvictions(evict_blks, writebacks)) {
+            return false;
         }
     }
 
-    // Update the number of data expansions/contractions
     if (is_data_expansion) {
         stats.dataExpansions++;
     } else if (is_data_contraction) {
         stats.dataContractions++;
     }
 
-    compression_blk->setSizeBits(compression_size);
-    compression_blk->setDecompressionLatency(decompression_lat);
+    compressor->setSizeBits(blk, compression_size);
+    blk->setDecompressionLatency(decompression_lat);
 
     return true;
 }
@@ -1626,12 +1567,24 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
         const auto comp_data = compressor->compress(
             pkt->getConstPtr<uint64_t>(), compression_lat, decompression_lat);
         blk_size_bits = comp_data->getSizeBits();
+        blk_size_bits = (blk_size_bits + 63) & ~63;
+        if (blk_size_bits < blkSize*CHAR_BIT){
+                decompression_lat = Cycles(5);
+            }
     }
 
     // Find replacement victim
     std::vector<CacheBlk*> evict_blks;
-    CacheBlk *victim = tags->findVictim(addr, is_secure, blk_size_bits,
-                                        evict_blks);
+    if (compressor) {
+        victim = tags->findVictimVariableSegment(
+                  addr, is_secure, blk_size_bits, evict_blks
+                  );
+    } else {
+        victim = tags->findVictim(
+                 addr, is_secure, blk_size_bits, evict_blks
+                  );
+    }
+
 
     // It is valid to return nullptr if there is no victim
     if (!victim)
@@ -1650,7 +1603,7 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
 
     // If using a compressor, set compression data. This must be done after
     // insertion, as the compression bit may be set.
-    if (compressor) {
+    if (compressor && predictor) {
         compressor->setSizeBits(victim, blk_size_bits);
         compressor->setDecompressionLatency(victim, decompression_lat);
     }
