@@ -136,7 +136,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
             // Otherwise, add valid blocks to the list and update the set size
             else {
                 valid_blocks.push_back(block);
-                segments += (cache_blk->cSize / 64);  // Convert size to segments
+                segments += ((cache_blk->cSize + 63) / 64);  // Convert size to segments
             }
         } else {
             // Invalid block, can immediately be evicted
@@ -149,7 +149,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
     unsigned max_set_segments = 32;
 
     // Calculate remaining space needed in segments
-    int extra_segments = req_size / 64 - (max_set_segments - segments);
+    int extra_segments = (req_size + 63) / 64 - (max_set_segments - segments);
 
     // If not enough space or no victim found, use LRU for selection
     if (extra_segments > 0 || !victim) {
@@ -157,7 +157,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
         evicts.push_back(victim);
     }
 
-    extra_segments -= (victim->cSize / 64);
+    extra_segments -= ((victim->cSize + 63) / 64);
 
     // If still not enough space, find larger valid blocks to evict
     if (extra_segments > 0) {
@@ -166,7 +166,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
         // Find valid blocks large enough to meet the space requirement
         for (const auto& block : valid_blocks) {
             CacheBlk* cache_blk = static_cast<CacheBlk*>(block);
-            if ((cache_blk->cSize / 64) >= extra_segments && cache_blk != victim) {
+            if (((cache_blk->cSize + 63) / 64) >= extra_segments && cache_blk != victim) {
                 large_blocks.push_back(block);
             }
         }
@@ -178,7 +178,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
         }
     }
 
-    extra_segments -= (victim->cSize / 64);
+    extra_segments -= ((victim->cSize + 63) / 64);
     assert(extra_segments <= 0);
 
     // Return the block being updated, or the selected victim
