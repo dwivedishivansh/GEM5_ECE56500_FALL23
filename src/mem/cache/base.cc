@@ -110,7 +110,10 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
       missCount(p.max_miss_count),
       addrRanges(p.addr_ranges.begin(), p.addr_ranges.end()),
       system(p.system),
-      stats(*this)
+      stats(*this),
+      /* Start EL: Adaptive Cache Control */
+      associativity(p.assoc)
+      /* End EL */
 {
     // the MSHR queue has no reserve entries as we check the MSHR
     // queue on every single allocation, whereas the write queue has
@@ -974,6 +977,10 @@ BaseCache::handleEvictions(std::vector<CacheBlk*> &evict_blks,
 
 bool
 BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketList &writebacks) {
+
+    CacheBlk *victim = blk;
+    std::vector<CacheBlk*> evict_blks;
+
     if (blk == tempBlock) {
         return true;
     }
@@ -982,7 +989,7 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
     Cycles decompression_lat = Cycles(0);
     std::size_t compression_size;
 
-    if (compressor && predictor) {
+    if (compressor && ACC_Prediction) {
         const auto comp_data = compressor->compress(data, compression_lat, decompression_lat);
         compression_size = comp_data->getSizeBits();
         if (compression_size < blkSize * CHAR_BIT) {
@@ -995,9 +1002,6 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
     const std::size_t prev_size = blk->cSize;
     bool is_data_expansion = prev_size < compression_size;
     bool is_data_contraction = prev_size > compression_size;
-
-    CacheBlk *victim = blk;
-    std::vector<CacheBlk*> evict_blks;
 
     if (is_data_expansion) {
         victim = tags->findVictimVariableSegment(regenerateBlkAddr(blk), blk->isSecure(), compression_size, evict_blks, true);
@@ -1168,6 +1172,11 @@ bool
 BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                   PacketList &writebacks)
 {
+	/* Start EL: Adaptive Cache Compression */
+	bool hit = false;
+	int stackDepth = 0;
+	/* End EL */
+
     // sanity check
     assert(pkt->isRequest());
 
@@ -1181,6 +1190,52 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 
     DPRINTF(Cache, "%s for %s %s\n", __func__, pkt->print(),
             blk ? "hit " + blk->print() : "miss");
+
+	/* Start EL: Add support for Adaptive Cache Compression GCP Prediction */
+    if (compressor){
+		
+		// When we access the cache, if we get a valid pointer back from accessBlock() above, then we have a cache hit
+		if (blk){
+			hit = true;
+			stackDepth = tags->getStackDepth(pkt->getAddr(), blk);
+			blk->lastTouchTick = curTick();
+		}
+
+        //TODO: Do we need to worry about the int counter rolling over if compression is very helpful over long running program? 
+        // Could add if condition to check if near max value
+
+    	// Update the Global Compression Predictor to determine whether we are helping or hurting
+
+		// 'Penalized Hit', line is compressed when it didn't need to be
+		// An X-way compressed cache is the same as a (X/2)-way uncompressed cache, so in this case the block would have hit in an uncompressed cache
+    	if( hit && blk->isCompressed() && (stackDepth < (associativity / 2) )){ 
+    
+            //Subtract Normalized Decompression penalty in cycles (5 cycles in paper, normalized to 1)
+      		GCP = GCP - N_DECOMPRESSION_PENALTY; 
+      	
+        //'Avoidable Miss', where line would have hit if more recently used lines in cache had been compressed
+        // If the sum of the CompressedSizes (CSize) of all entries currently in the cache is less than
+        // the total amount of data segments available in the set, then we would have benefitted from more compression
+		} else if(!hit && (tags->getSetCSize() < (NUM_DATA_SEGMENTS_PER_SET * CHAR_BIT) )){
+        	
+			//Add the cost of an L2 miss, because compression would have helped us here. (400 cycles in paper, normalized to 80)
+			GCP = GCP + N_L2_MISS_PENALTY;
+      	
+        //'Avoided Miss', where line was a hit only because more recently used lines in cache are compressed
+		} else if(hit && (stackDepth >= (associativity/2) ) ){
+
+			//Add the cost of an L2 miss, because compression helped us here (400 cycles in paper, normalized to 80)
+        	GCP = GCP + N_L2_MISS_PENALTY;
+       	}
+
+    	// If we've determined that the Compression is helping us let's use it, otherwise let's not use it 
+	  	if(GCP >= 0){
+        	ACC_Prediction = true;
+       	}
+       	else{
+        	ACC_Prediction = false;
+       	}			 
+    }
 
     if (pkt->req->isCacheMaintenance()) {
         // A cache maintenance operation is always forwarded to the
@@ -1601,7 +1656,7 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
 
     // If using a compressor, set compression data. This must be done after
     // insertion, as the compression bit may be set.
-    if (compressor && predictor) {
+    if (compressor && ACC_Prediction) {
         compressor->setSizeBits(victim, blk_size_bits);
         compressor->setDecompressionLatency(victim, decompression_lat);
     }
