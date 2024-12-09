@@ -1198,7 +1198,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 		if (blk){
 			hit = true;
 			stackDepth = tags->getStackDepth(pkt->getAddr(), blk);
-			blk->lastTouchTick = curTick();
+			//blk->lastTouchTick = curTick(); Already done in accessBlock() call above, don't need to do it twice
 		}
 
         //TODO: Do we need to worry about the int counter rolling over if compression is very helpful over long running program? 
@@ -1216,7 +1216,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         //'Avoidable Miss', where line would have hit if more recently used lines in cache had been compressed
         // If the sum of the CompressedSizes (CSize) of all entries currently in the cache is less than
         // the total amount of data segments available in the set, then we would have benefitted from more compression
-		} else if(!hit && (tags->getSetCSize() < (NUM_DATA_SEGMENTS_PER_SET * CHAR_BIT) )){
+		} else if(!hit && (tags->getSetCSize( pkt->getAddr() ) < (NUM_DATA_SEGMENTS_PER_SET * CHAR_BIT) )){
         	
 			//Add the cost of an L2 miss, because compression would have helped us here. (400 cycles in paper, normalized to 80)
 			GCP = GCP + N_L2_MISS_PENALTY;
@@ -1599,6 +1599,8 @@ BaseCache::handleFill(PacketPtr pkt, CacheBlk *blk, PacketList &writebacks,
 CacheBlk*
 BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
 {
+    CacheBlk *victim = NULL;
+
     // Get address
     const Addr addr = pkt->getAddr();
 

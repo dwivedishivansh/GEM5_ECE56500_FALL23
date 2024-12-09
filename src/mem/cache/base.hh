@@ -102,9 +102,9 @@ class BaseCache : public ClockedObject
 {
   public:
     /* Start EL: Adaptive Cache Compression */
+    uint8_t associativity;
     int GCP = 0; //Global Compression Predictor
     bool ACC_Prediction = true; //Boolean to determine whether compression should be used or not
-    uint8_t associativity;
     /* End EL */
 
   protected:

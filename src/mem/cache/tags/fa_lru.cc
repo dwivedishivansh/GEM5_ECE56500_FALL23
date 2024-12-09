@@ -83,6 +83,20 @@ FALRU::~FALRU()
     delete[] blks;
 }
 
+/* Start EL: Adaptive Cache Compression */
+int
+FALRU::getStackDepth(Addr addr, CacheBlk *blk)
+{
+    return 0;
+}
+
+size_t
+FALRU::getSetCSize(Addr addr)
+{
+    return 0;
+}
+/* End EL */
+
 void
 FALRU::tagsInit()
 {

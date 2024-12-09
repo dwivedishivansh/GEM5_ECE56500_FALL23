@@ -178,6 +178,19 @@ class SectorTags : public BaseTags
                          const std::size_t size,
                          std::vector<CacheBlk*>& evict_blks) override;
 
+    /* Start EL: Adaptive Cache Control */
+    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
+                         const std::size_t size,
+                         std::vector<CacheBlk*>& evict_blks,
+                         bool update_expansion=false) override
+    {
+        return findVictim(addr, is_secure, size, evict_blks);
+    }
+
+    int getStackDepth(Addr addr, CacheBlk *blk) override;
+    size_t getSetCSize(Addr addr) override;
+    /* End EL */
+
     /**
      * Calculate a block's offset in a sector from the address.
      *

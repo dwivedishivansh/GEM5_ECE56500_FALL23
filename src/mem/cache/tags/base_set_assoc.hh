@@ -147,6 +147,10 @@ class BaseSetAssoc : public BaseTags
 
             // Update replacement data of accessed block
             replacementPolicy->touch(blk->replacementData, pkt);
+
+            /* Start EL: Adaptive Cache Compression */
+            blk->lastTouchTick = curTick();
+            /* End EL */
         }
 
         // The tag lookup latency is the same for a hit or a miss
@@ -194,7 +198,7 @@ class BaseSetAssoc : public BaseTags
      */
     int getStackDepth(Addr addr, CacheBlk *blk)
     {
-        int rank = 0;
+        int stackDepth = 0;
         CacheBlk* cache_blk = NULL;
         Tick entry_tick;
 
@@ -204,17 +208,17 @@ class BaseSetAssoc : public BaseTags
         //Copied from findVictim() in LRU replacement code
         //For each entry in the set, get the last tick it was touched. If that tick
         for( const auto& entry : entries) {
-            CacheBlk* cache_blk = static_cast<CacheBlk*>(entry);
+            cache_blk = static_cast<CacheBlk*>(entry);
             entry_tick = cache_blk->lastTouchTick;
 
             // For each entry, if the entry is valid and it's last touch is greater (more recent) than you
             // block's last touch, then your block's rank needs to increase
-            if (cache_blk->isValid() && (entry_tick > blk->lastTouchTick ){
-                rank++;
+            if (cache_blk->isValid() && (entry_tick > blk->lastTouchTick ) ){
+                stackDepth++;
             }
         }
 
-        return rank;
+        return stackDepth;
     }
 
     /**
@@ -233,7 +237,7 @@ class BaseSetAssoc : public BaseTags
         //Copied from findVictim() in LRU replacement code
         //For each entry in the set, 
         for( const auto& entry : entries) {
-            CacheBlk* cache_blk = static_cast<CacheBlk*>(entry);
+            cache_blk = static_cast<CacheBlk*>(entry);
 
             // For each entry, if the entry is valid and the 
             if (cache_blk->isValid()){
@@ -266,6 +270,10 @@ class BaseSetAssoc : public BaseTags
 
         // Update replacement policy
         replacementPolicy->reset(blk->replacementData, pkt);
+        
+        /* Start EL: Adaptive Cache Control */
+        blk->lastTouchTick = curTick();
+        /* End EL */
     }
 
     void moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk) override;

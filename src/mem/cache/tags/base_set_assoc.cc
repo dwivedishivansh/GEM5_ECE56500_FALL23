@@ -95,6 +95,10 @@ BaseSetAssoc::invalidate(CacheBlk *blk)
 
     // Invalidate replacement data
     replacementPolicy->invalidate(blk->replacementData);
+
+    /* Start EL: Adaptive Cache Compression */
+    blk->lastTouchTick = Tick(0);
+    /* End EL */
 }
 
 void
@@ -106,7 +110,9 @@ BaseSetAssoc::moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk)
     // we must touch the replacement data of the new entry, and invalidate
     // the one that is being moved.
     replacementPolicy->invalidate(src_blk->replacementData);
+    src_blk->lastTouchTick = Tick(0);
     replacementPolicy->reset(dest_blk->replacementData);
+    dest_blk->lastTouchTick = curTick();
 }
 
 CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
