@@ -89,11 +89,24 @@ class RequestPort;
 class QueueEntry;
 struct BaseCacheParams;
 
+/* Start EL: Adaptive Cache Compression */
+#define NUM_DATA_SEGMENTS_PER_SET 32 //Each set can hold up to 64 data segments, split between compressed and uncompressed entries
+#define N_DECOMPRESSION_PENALTY 1 //Normalized Decompression Penalty. 5 cycles in paper, normalized to 1
+#define N_L2_MISS_PENALTY 80 //Normalized L2 Cache Miss Penalty. 400 cycles in paper, normalized to 80
+/* End EL */
+
 /**
  * A basic cache interface. Implements some common functions for speed.
  */
 class BaseCache : public ClockedObject
 {
+  public:
+    /* Start EL: Adaptive Cache Compression */
+    uint8_t associativity;
+    int GCP = 0; //Global Compression Predictor
+    bool ACC_Prediction = true; //Boolean to determine whether compression should be used or not
+    /* End EL */
+
   protected:
     /**
      * Indexes to enumerate the MSHR queues.

@@ -118,6 +118,8 @@ class CacheBlk : public TaggedEntry
 
     Cycles decompressionLatency;
 
+    Tick lastTouchTick;
+
   protected:
     /**
      * Represents that the indicated thread context has a "lock" on

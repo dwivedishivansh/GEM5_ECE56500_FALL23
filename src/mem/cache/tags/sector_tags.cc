@@ -67,6 +67,20 @@ SectorTags::SectorTags(const SectorTagsParams &p)
              "# of blocks per sector must be non-zero and a power of 2");
 }
 
+/* Start EL: Adaptive Cache Compression */
+int
+SectorTags::getStackDepth(Addr addr, CacheBlk *blk)
+{
+    return 0;
+}
+
+size_t
+SectorTags::getSetCSize(Addr addr)
+{
+    return 0;
+}
+/* End EL */
+
 void
 SectorTags::tagsInit()
 {
