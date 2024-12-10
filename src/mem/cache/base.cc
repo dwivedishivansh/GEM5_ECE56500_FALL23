@@ -53,6 +53,7 @@
 #include "debug/CacheRepl.hh"
 #include "debug/CacheVerbose.hh"
 #include "debug/HWPrefetch.hh"
+#include "debug/EL.hh"
 #include "mem/cache/compressors/base.hh"
 #include "mem/cache/mshr.hh"
 #include "mem/cache/prefetch/base.hh"
@@ -984,12 +985,13 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
     if (blk == tempBlock) {
         return true;
     }
-
+    DPRINTF(EL,"EL: Entered updateCompressionData()\n");
     Cycles compression_lat = Cycles(0);
     Cycles decompression_lat = Cycles(0);
     std::size_t compression_size;
 
     if (compressor && ACC_Prediction) {
+		DPRINTF(EL,"EL: ACC_Prediction is TRUE in updateCompressionData()\n");
         const auto comp_data = compressor->compress(data, compression_lat, decompression_lat);
         compression_size = comp_data->getSizeBits();
         if (compression_size < blkSize * CHAR_BIT) {
@@ -1023,7 +1025,7 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
 
     compressor->setSizeBits(blk, compression_size);
     blk->setDecompressionLatency(decompression_lat);
-
+    DPRINTF(EL,"EL: Exited updateCompressionData()\n");
     return true;
 }
 
@@ -1193,12 +1195,15 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 
 	/* Start EL: Add support for Adaptive Cache Compression GCP Prediction */
     if (compressor){
-		
+		DPRINTF(EL, "EL: Starting GCP Update code in BaseCache::access()\n");
+		DPRINTF(EL, "EL: %s for %s %s\n", __func__, pkt->print(),
+            blk ? "hit " + blk->print() : "miss");
 		// When we access the cache, if we get a valid pointer back from accessBlock() above, then we have a cache hit
 		if (blk){
 			hit = true;
 			stackDepth = tags->getStackDepth(pkt->getAddr(), blk);
 			//blk->lastTouchTick = curTick(); Already done in accessBlock() call above, don't need to do it twice
+			DPRINTF(EL, "EL: StackDepth = %s \n", stackDepth);
 		}
 
         //TODO: Do we need to worry about the int counter rolling over if compression is very helpful over long running program? 
@@ -1211,7 +1216,9 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
     	if( hit && blk->isCompressed() && (stackDepth < (associativity / 2) )){ 
     
             //Subtract Normalized Decompression penalty in cycles (5 cycles in paper, normalized to 1)
+			DPRINTF(EL, "EL: Penalized Hit! Before GCP = %s\n", GCP);
       		GCP = GCP - N_DECOMPRESSION_PENALTY; 
+			DPRINTF(EL, "EL: After GCP = %s\n", GCP);
       	
         //'Avoidable Miss', where line would have hit if more recently used lines in cache had been compressed
         // If the sum of the CompressedSizes (CSize) of all entries currently in the cache is less than
@@ -1219,13 +1226,17 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 		} else if(!hit && (tags->getSetCSize( pkt->getAddr() ) < (NUM_DATA_SEGMENTS_PER_SET * CHAR_BIT) )){
         	
 			//Add the cost of an L2 miss, because compression would have helped us here. (400 cycles in paper, normalized to 80)
+			DPRINTF(EL, "EL: Avoidable Miss! CSize = %s, Before GCP = %s\n", tags->getSetCSize(pkt->getAddr() ), GCP);
 			GCP = GCP + N_L2_MISS_PENALTY;
+			DPRINTF(EL, "EL: After GCP = %s\n", GCP);
       	
         //'Avoided Miss', where line was a hit only because more recently used lines in cache are compressed
 		} else if(hit && (stackDepth >= (associativity/2) ) ){
 
 			//Add the cost of an L2 miss, because compression helped us here (400 cycles in paper, normalized to 80)
+			DPRINTF(EL, "EL: Avoided Miss! Before GCP = %s\n", GCP);
         	GCP = GCP + N_L2_MISS_PENALTY;
+			DPRINTF(EL, "EL: After GCP = %s\n", GCP);
        	}
 
     	// If we've determined that the Compression is helping us let's use it, otherwise let's not use it 
@@ -1234,7 +1245,8 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
        	}
        	else{
         	ACC_Prediction = false;
-       	}			 
+       	}
+		DPRINTF(EL, "EL: Exiting Predictor code, GCP = %s\n", GCP);			 
     }
 
     if (pkt->req->isCacheMaintenance()) {
@@ -1599,8 +1611,6 @@ BaseCache::handleFill(PacketPtr pkt, CacheBlk *blk, PacketList &writebacks,
 CacheBlk*
 BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
 {
-    CacheBlk *victim = NULL;
-
     // Get address
     const Addr addr = pkt->getAddr();
 
@@ -1619,25 +1629,22 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
     // compressor is used, the compression/decompression methods are called to
     // calculate the amount of extra cycles needed to read or write compressed
     // blocks.
-    if (compressor && pkt->hasData()) {
-        const auto comp_data = compressor->compress(
-            pkt->getConstPtr<uint64_t>(), compression_lat, decompression_lat);
+    if (compressor && pkt->hasData() && ACC_Prediction ) {
+        const auto comp_data = compressor->compress(pkt->getConstPtr<uint64_t>(), compression_lat, decompression_lat);
         blk_size_bits = comp_data->getSizeBits();
+        //TODO: Do the block size bits need to be adjusted?
         if (blk_size_bits < blkSize*CHAR_BIT){
                 decompression_lat = Cycles(5);
-            }
+        }
     }
 
     // Find replacement victim
     std::vector<CacheBlk*> evict_blks;
+    CacheBlk *victim;
     if (compressor) {
-        victim = tags->findVictimVariableSegment(
-                  addr, is_secure, blk_size_bits, evict_blks
-                  );
+        victim = tags->findVictimVariableSegment(addr, is_secure, blk_size_bits, evict_blks);
     } else {
-        victim = tags->findVictim(
-                 addr, is_secure, blk_size_bits, evict_blks
-                  );
+        victim = tags->findVictim(addr, is_secure, blk_size_bits, evict_blks);
     }
 
 

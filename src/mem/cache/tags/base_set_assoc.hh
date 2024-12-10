@@ -189,6 +189,11 @@ class BaseSetAssoc : public BaseTags
 
     /* Start EL: Adaptive Cache Compression */
 
+    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
+                     const std::size_t req_size,
+                     std::vector<CacheBlk*>& evicts,
+                     bool update_expansion=false) override;
+
     /**
      * Get the stack depth of the cache block in the set, aka how it ranks in the LRU replacement 
      * algo compared to the other entries in the same set. 
@@ -248,11 +253,6 @@ class BaseSetAssoc : public BaseTags
         return sum;
     }
     /* End EL */
-
-    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
-                     const std::size_t req_size,
-                     std::vector<CacheBlk*>& evicts,
-                     bool update_expansion=false) override;
 
     /**
      * Insert the new block into the cache and update replacement data.
