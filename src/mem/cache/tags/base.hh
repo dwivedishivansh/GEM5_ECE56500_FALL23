@@ -282,6 +282,17 @@ class BaseTags : public ClockedObject
                                  const std::size_t size,
                                  std::vector<CacheBlk*>& evict_blks) = 0;
 
+    /*  Start EL: Adaptive Cache Compression */
+    virtual CacheBlk* findVictimVariableSegment(Addr addr, 
+                                 const bool is_secure,
+                                 const std::size_t size,
+                                 std::vector<CacheBlk*>& evict_blks,
+                                 bool update_expansion=false) = 0;
+
+    virtual int getStackDepth(Addr addr, CacheBlk *blk) = 0;
+    virtual size_t getSetCSize(Addr addr) = 0;
+    /* End EL */
+
     /**
      * Access block and update replacement data. May not succeed, in which case
      * nullptr is returned. This has all the implications of a cache access and

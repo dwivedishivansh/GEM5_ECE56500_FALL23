@@ -147,6 +147,10 @@ class BaseSetAssoc : public BaseTags
 
             // Update replacement data of accessed block
             replacementPolicy->touch(blk->replacementData, pkt);
+
+            /* Start EL: Adaptive Cache Compression */
+            blk->lastTouchTick = curTick();
+            /* End EL */
         }
 
         // The tag lookup latency is the same for a hit or a miss
@@ -183,10 +187,72 @@ class BaseSetAssoc : public BaseTags
         return victim;
     }
 
+    /* Start EL: Adaptive Cache Compression */
+
     CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
                      const std::size_t req_size,
                      std::vector<CacheBlk*>& evicts,
                      bool update_expansion=false) override;
+
+    /**
+     * Get the stack depth of the cache block in the set, aka how it ranks in the LRU replacement 
+     * algo compared to the other entries in the same set. 
+     *
+     * @param addr Address to find the Stack Depth for (used to find entries in the set)
+     * @param blk Cache Block you want the Stack Depth for
+     */
+    int getStackDepth(Addr addr, CacheBlk *blk)
+    {
+        int stackDepth = 0;
+        CacheBlk* cache_blk = NULL;
+        Tick entry_tick;
+
+        // Get possible entries
+        const std::vector<ReplaceableEntry*> entries = indexingPolicy->getPossibleEntries(addr);
+
+        //Copied from findVictim() in LRU replacement code
+        //For each entry in the set, get the last tick it was touched. If that tick
+        for( const auto& entry : entries) {
+            cache_blk = static_cast<CacheBlk*>(entry);
+            entry_tick = cache_blk->lastTouchTick;
+
+            // For each entry, if the entry is valid and it's last touch is greater (more recent) than you
+            // block's last touch, then your block's rank needs to increase
+            if (cache_blk->isValid() && (entry_tick > blk->lastTouchTick ) ){
+                stackDepth++;
+            }
+        }
+
+        return stackDepth;
+    }
+
+    /**
+     * Get the total Compressed size summed for all entries in the set
+     *
+     * @param addr Address to find the summed CSizes for (used to find entries in the set)
+     */
+    size_t getSetCSize(Addr addr)
+    {
+        size_t sum = 0;
+        CacheBlk* cache_blk = NULL;
+
+        // Get possible entries
+        const std::vector<ReplaceableEntry*> entries = indexingPolicy->getPossibleEntries(addr);
+
+        //Copied from findVictim() in LRU replacement code
+        //For each entry in the set, 
+        for( const auto& entry : entries) {
+            cache_blk = static_cast<CacheBlk*>(entry);
+
+            // For each entry, if the entry is valid and the 
+            if (cache_blk->isValid()){
+                sum = sum + cache_blk->getCSize();
+            }
+        }
+
+        return sum;
+    }
+    /* End EL */
 
     /**
      * Insert the new block into the cache and update replacement data.
@@ -204,6 +270,10 @@ class BaseSetAssoc : public BaseTags
 
         // Update replacement policy
         replacementPolicy->reset(blk->replacementData, pkt);
+        
+        /* Start EL: Adaptive Cache Control */
+        blk->lastTouchTick = curTick();
+        /* End EL */
     }
 
     void moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk) override;
