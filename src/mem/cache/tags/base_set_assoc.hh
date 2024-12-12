@@ -203,7 +203,7 @@ class BaseSetAssoc : public BaseTags
      */
     int getStackDepth(Addr addr, CacheBlk *blk)
     {
-        int stackDepth = 0;
+        int stackDepth = 1;
         CacheBlk* cache_blk = NULL;
         Tick entry_tick;
 

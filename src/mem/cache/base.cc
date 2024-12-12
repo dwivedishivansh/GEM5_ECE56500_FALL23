@@ -994,6 +994,7 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
 		DPRINTF(EL,"EL: ACC_Prediction is TRUE in updateCompressionData()\n");
         const auto comp_data = compressor->compress(data, compression_lat, decompression_lat);
         compression_size = comp_data->getSizeBits();
+        compression_size = (compression_size + 63) & ~63;
         if (compression_size < blkSize * CHAR_BIT) {
             decompression_lat = Cycles(5);
         }
@@ -1213,7 +1214,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 
 		// 'Penalized Hit', line is compressed when it didn't need to be
 		// An X-way compressed cache is the same as a (X/2)-way uncompressed cache, so in this case the block would have hit in an uncompressed cache
-    	if( hit && blk->isCompressed() && (stackDepth < (associativity / 2) )){ 
+    	if(hit && blk->isCompressed() && (stackDepth <= (associativity / 2))){ 
     
             //Subtract Normalized Decompression penalty in cycles (5 cycles in paper, normalized to 1)
 			DPRINTF(EL, "EL: Penalized Hit! Before GCP = %s\n", GCP);
@@ -1223,7 +1224,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         //'Avoidable Miss', where line would have hit if more recently used lines in cache had been compressed
         // If the sum of the CompressedSizes (CSize) of all entries currently in the cache is less than
         // the total amount of data segments available in the set, then we would have benefitted from more compression
-		} else if(!hit && (tags->getSetCSize( pkt->getAddr() ) < (NUM_DATA_SEGMENTS_PER_SET * CHAR_BIT) )){
+		} else if(!hit && (tags->getSetCSize( pkt->getAddr() ) < (NUM_DATA_SEGMENTS_PER_SET * 8 * CHAR_BIT) )){
         	
 			//Add the cost of an L2 miss, because compression would have helped us here. (400 cycles in paper, normalized to 80)
 			DPRINTF(EL, "EL: Avoidable Miss! CSize = %s, Before GCP = %s\n", tags->getSetCSize(pkt->getAddr() ), GCP);
@@ -1231,7 +1232,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 			DPRINTF(EL, "EL: After GCP = %s\n", GCP);
       	
         //'Avoided Miss', where line was a hit only because more recently used lines in cache are compressed
-		} else if(hit && (stackDepth >= (associativity/2) ) ){
+		} else if(hit && (stackDepth > (associativity/2) ) ){
 
 			//Add the cost of an L2 miss, because compression helped us here (400 cycles in paper, normalized to 80)
 			DPRINTF(EL, "EL: Avoided Miss! Before GCP = %s\n", GCP);
@@ -1629,9 +1630,10 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
     // compressor is used, the compression/decompression methods are called to
     // calculate the amount of extra cycles needed to read or write compressed
     // blocks.
-    if (compressor && pkt->hasData() && ACC_Prediction ) {
+    if (compressor && pkt->hasData() && ACC_Prediction) {
         const auto comp_data = compressor->compress(pkt->getConstPtr<uint64_t>(), compression_lat, decompression_lat);
         blk_size_bits = comp_data->getSizeBits();
+        
         //TODO: Do the block size bits need to be adjusted?
         if (blk_size_bits < blkSize*CHAR_BIT){
                 decompression_lat = Cycles(5);

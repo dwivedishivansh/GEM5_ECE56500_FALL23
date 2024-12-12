@@ -65,9 +65,12 @@ class L1_DCache(L1Cache):
 
 class L2Cache(Cache):
     assoc = 8
+    # Latency for the return path on a miss
+    response_latency = 50
+    
     tag_latency = 20
     data_latency = 20
-    response_latency = 20
+    
     mshrs = 20
     tgts_per_mshr = 12
     write_buffers = 8

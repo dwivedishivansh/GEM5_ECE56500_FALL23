@@ -119,9 +119,9 @@ CacheBlk::setCSize(const std::size_t size)
     //std::size_t cSizeB = std::ceil( static_cast<double>(bits) / 8);
   
     //const std::size_t blk_size_bits = CHAR_BIT * (tags->blkSize);
-    const std::size_t blk_size_bits = CHAR_BIT * (0); //TODO: tags is not declared in this scope
+    const std::size_t blk_size_bits = CHAR_BIT * (64); // Hardcoded Block Size
     const std::size_t compression_factor = (size > blk_size_bits) ? 1 :
-    ((size == 0) ? blk_size_bits : alignToPowerOfTwo(std::floor( static_cast<double>(blk_size_bits) / size)));
+    ((size == 0) ? blk_size_bits : alignToPowerOfTwo(std::floor( double(blk_size_bits) / size)));
   
     compressionFactor = compression_factor;
 

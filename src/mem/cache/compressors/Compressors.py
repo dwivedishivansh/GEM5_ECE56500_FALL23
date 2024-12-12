@@ -38,7 +38,7 @@ class BaseCacheCompressor(SimObject):
     cxx_header = "mem/cache/compressors/base.hh"
 
     block_size = Param.Int(Parent.cache_line_size, "Block size in bytes")
-    chunk_size_bits = Param.Unsigned(32,
+    chunk_size_bits = Param.Unsigned(64,
         "Size of a parsing data chunk (in bits)")
     size_threshold_percentage = Param.Percent(50,
         "Minimum percentage of the block size, a compressed block must "

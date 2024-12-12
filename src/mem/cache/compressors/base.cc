@@ -151,8 +151,7 @@ std::unique_ptr<Base::CompressionData>
 Base::compress(const uint64_t* data, Cycles& comp_lat, Cycles& decomp_lat)
 {
     // Apply compression
-    std::unique_ptr<CompressionData> comp_data =
-        compress(toChunks(data), comp_lat, decomp_lat);
+    std::unique_ptr<CompressionData> comp_data = compress(toChunks(data), comp_lat, decomp_lat);
 
     // If we are in debug mode apply decompression just after the compression.
     // If the results do not match, we've got an error
@@ -169,6 +168,7 @@ Base::compress(const uint64_t* data, Cycles& comp_lat, Cycles& decomp_lat)
 
     // Get compression size. If compressed size is greater than the size
     // threshold, the compression is seen as unsuccessful
+    
     std::size_t comp_size_bits = comp_data->getSizeBits();
     if (comp_size_bits > sizeThreshold * CHAR_BIT) {
         comp_size_bits = blkSize * CHAR_BIT;
@@ -197,6 +197,7 @@ Cycles
 Base::getDecompressionLatency(const CacheBlk* blk)
 {
     const CompressionBlk* comp_blk = static_cast<const CompressionBlk*>(blk);
+    //const CacheBlk* comp_blk = (blk);
 
     // If block is compressed, return its decompression latency
     if (comp_blk && comp_blk->isCompressed()){
@@ -218,7 +219,7 @@ Base::setDecompressionLatency(CacheBlk* blk, const Cycles lat)
     assert(blk != nullptr);
 
     // Assign latency
-    static_cast<CompressionBlk*>(blk)->setDecompressionLatency(lat);
+    blk->setDecompressionLatency(lat);
 }
 
 void
@@ -228,7 +229,7 @@ Base::setSizeBits(CacheBlk* blk, const std::size_t size_bits)
     assert(blk != nullptr);
 
     // Assign size
-    static_cast<CompressionBlk*>(blk)->setSizeBits(size_bits);
+    blk->setCSize(size_bits);
 }
 
 Base::BaseStats::BaseStats(Base& _compressor)
