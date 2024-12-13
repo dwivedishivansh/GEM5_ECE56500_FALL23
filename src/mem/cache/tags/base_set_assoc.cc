@@ -123,7 +123,7 @@ CacheBlk* BaseSetAssoc::findCompressedDataReplacement(Addr addr,
 {
 	CacheBlk* replacement = NULL;
     CacheBlk* update_blk = NULL;
-	std::vector<ReplaceableEntry*> valid_blocks = NULL;
+	std::vector<ReplaceableEntry*> valid_blocks;
 	
 	
 	
