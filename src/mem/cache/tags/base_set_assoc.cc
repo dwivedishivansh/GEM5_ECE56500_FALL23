@@ -115,92 +115,25 @@ BaseSetAssoc::moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk)
     dest_blk->lastTouchTick = curTick();
 }
 
-
-CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
-                        const bool is_secure,
-                        const std::size_t size,
-                        std::vector<CacheBlk*>& evict_blks,
-                        bool update_expansion)
-{
-    // Get possible entries to be victimized
-    const std::vector<ReplaceableEntry*> entries =
-        indexingPolicy->getPossibleEntries(addr);
-
-    Addr tag = extractTag(addr);
-    unsigned set_size = 0;
-    CacheBlk* victim = nullptr;
-    CacheBlk* curr_blk = nullptr;
-    std::vector<ReplaceableEntry*> valid_entries;
-
-    for (const auto& entry : entries) {
-        CacheBlk* entry_block = static_cast<CacheBlk*>(entry);
-        if (entry_block->isValid()) {
-            if (entry_block->matchTag(tag, is_secure) && update_expansion) {
-                curr_blk = entry_block;
-                victim = curr_blk;
-            }
-            else {
-                valid_entries.push_back(entry);
-                set_size += entry_block->cSize;
-            }
-        }
-        else {
-            victim = entry_block;
-            evict_blks.push_back(victim);
-        }
-
-    }
-
-    unsigned max_set_size = (allocAssoc/2)*blkSize*CHAR_BIT;
-    int size_diff = size - (max_set_size - set_size);
-
-    if (size_diff > 0 || !victim) {
-        victim = static_cast<CacheBlk*>(
-            replacementPolicy->getVictim(valid_entries));
-        evict_blks.push_back(victim);
-    }
-
-    size_diff -= victim->cSize;
-
-    if (size_diff > 0) {
-        std::vector<ReplaceableEntry*> new_valid_entries;
-        for (const auto& entry : valid_entries) {
-            CacheBlk* entry_block = static_cast<CacheBlk*>(entry);
-            if (entry_block->cSize >= size_diff && entry_block != victim) {
-                new_valid_entries.push_back(entry);
-            }
-        }
-
-        victim = static_cast<CacheBlk*>(
-            replacementPolicy->getVictim(new_valid_entries));
-        evict_blks.push_back(victim);
-    }
-    size_diff -= victim->cSize;
-    assert(size_diff <=0);
-
-    if (curr_blk) {
-        return curr_blk;
-    }
-    return victim;
-
-}
-
-
-/*
-
-CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
+CacheBlk* BaseSetAssoc::findCompressedDataReplacement(Addr addr,
                         const bool is_secure,
                         const std::size_t req_size,
                         std::vector<CacheBlk*>& evicts,
                         bool update_expansion)
 {
-    // Retrieve possible blocks to be evicted
+	CacheBlk* replacement;
+    CacheBlk* update_blk;
+	std::vector<ReplaceableEntry*> valid_blocks;
+	
+	
+	
+	// Get all blocks in the set
     const std::vector<ReplaceableEntry*> blocks = indexingPolicy->getPossibleEntries(addr);
-    Addr tag = extractTag(addr);
-    unsigned segments = 0;
-    CacheBlk* victim = nullptr;
-    CacheBlk* update_blk = nullptr;
-    std::vector<ReplaceableEntry*> valid_blocks;
+	Addr tag = extractTag(addr);
+	unsigned segments = 0;
+	// Max set size in segments
+    unsigned max_set_segments = 32;
+    
 
     // Process all blocks in the cache set
     for (const auto& block : blocks) {
@@ -210,7 +143,7 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
             // If the block needs updating, set it as victim
             if (cache_blk->matchTag(tag, is_secure) && update_expansion) {
                 update_blk = cache_blk;
-                victim = update_blk;
+                replacement = update_blk;
             }
             // Otherwise, add valid blocks to the list and update the set size
             else {
@@ -219,24 +152,22 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
             }
         } else {
             // Invalid block, can immediately be evicted
-            victim = cache_blk;
-            evicts.push_back(victim);
+            replacement = cache_blk;
+            evicts.push_back(replacement);
         }
     }
 
-    // Max set size in segments
-    unsigned max_set_segments = 32;
-
+    
     // Calculate remaining space needed in segments
     int extra_segments = (req_size + 63) / 64 - (max_set_segments - segments);
 
     // If not enough space or no victim found, use LRU for selection
-    if (extra_segments > 0 || !victim) {
+    if (extra_segments > 0 || !replacement) {
         victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(valid_blocks));
-        evicts.push_back(victim);
+        evicts.push_back(replacement);
     }
 
-    extra_segments -= ((victim->cSize + 63) / 64);
+    extra_segments -= ((replacement->cSize + 63) / 64);
 
     // If still not enough space, find larger valid blocks to evict
     if (extra_segments > 0) {
@@ -253,20 +184,15 @@ CacheBlk* BaseSetAssoc::findVictimVariableSegment(Addr addr,
         // Evict from the filtered list if necessary
         if (!large_blocks.empty()) {
             victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(large_blocks));
-            evicts.push_back(victim);
+            evicts.push_back(replacement);
         }
     }
 
-    extra_segments -= ((victim->cSize + 63) / 64);
-    assert(extra_segments <= 0);
+    extra_segments -= ((replacement->cSize + 63) / 64);
 
     // Return the block being updated, or the selected victim
-    return (update_blk) ? update_blk : victim;
+    return (update_blk) ? update_blk : replacement;
 }
-
-} 
-*/
-
 
 
 } // namespace gem5

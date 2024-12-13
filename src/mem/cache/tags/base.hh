@@ -283,7 +283,7 @@ class BaseTags : public ClockedObject
                                  std::vector<CacheBlk*>& evict_blks) = 0;
 
     /*  Start EL: Adaptive Cache Compression */
-    virtual CacheBlk* findVictimVariableSegment(Addr addr, 
+    virtual CacheBlk* findCompressedDataReplacement(Addr addr, 
                                  const bool is_secure,
                                  const std::size_t size,
                                  std::vector<CacheBlk*>& evict_blks,

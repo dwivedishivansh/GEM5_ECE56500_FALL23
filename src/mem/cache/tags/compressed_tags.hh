@@ -109,7 +109,7 @@ class CompressedTags : public SectorTags
                          std::vector<CacheBlk*>& evict_blks) override;
 
     /* Start EL: Adaptive Cache Compression */
-    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
+    CacheBlk* findCompressedDataReplacement(Addr addr, const bool is_secure,
                          const std::size_t size,
                          std::vector<CacheBlk*>& evict_blks,
                          bool update_expansion=false) override

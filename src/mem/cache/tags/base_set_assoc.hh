@@ -189,7 +189,7 @@ class BaseSetAssoc : public BaseTags
 
     /* Start EL: Adaptive Cache Compression */
 
-    CacheBlk* findVictimVariableSegment(Addr addr, const bool is_secure,
+    CacheBlk* findCompressedDataReplacement(Addr addr, const bool is_secure,
                      const std::size_t req_size,
                      std::vector<CacheBlk*>& evicts,
                      bool update_expansion=false) override;

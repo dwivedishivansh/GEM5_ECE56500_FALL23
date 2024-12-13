@@ -1007,7 +1007,7 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data, PacketLis
     bool is_data_contraction = prev_size > compression_size;
 
     if (is_data_expansion) {
-        victim = tags->findVictimVariableSegment(regenerateBlkAddr(blk), blk->isSecure(), compression_size, evict_blks, true);
+        victim = tags->findCompressedDataReplacement(regenerateBlkAddr(blk), blk->isSecure(), compression_size, evict_blks, true);
 
         if (!victim) {
             return false;
@@ -1644,7 +1644,7 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
     std::vector<CacheBlk*> evict_blks;
     CacheBlk *victim;
     if (compressor) {
-        victim = tags->findVictimVariableSegment(addr, is_secure, blk_size_bits, evict_blks);
+        victim = tags->findCompressedDataReplacement(addr, is_secure, blk_size_bits, evict_blks);
     } else {
         victim = tags->findVictim(addr, is_secure, blk_size_bits, evict_blks);
     }
