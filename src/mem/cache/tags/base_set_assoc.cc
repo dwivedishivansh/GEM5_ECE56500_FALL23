@@ -140,7 +140,7 @@ CacheBlk* BaseSetAssoc::findCompressedDataReplacement(Addr addr,
         CacheBlk* cache_blk = static_cast<CacheBlk*>(block);
 
         if (cache_blk->isValid()) {
-            // If the block needs updating, set it as victim
+            // If the block needs updating, set it as replacement block
             if (cache_blk->matchTag(tag, is_secure) && update_expansion) {
                 update_blk = cache_blk;
                 replacement = update_blk;
@@ -161,9 +161,9 @@ CacheBlk* BaseSetAssoc::findCompressedDataReplacement(Addr addr,
     // Calculate remaining space needed in segments
     int extra_segments = (req_size + 63) / 64 - (max_set_segments - segments);
 
-    // If not enough space or no victim found, use LRU for selection
+    // If not enough space or no replacement candidate found, use LRU for selection
     if (extra_segments > 0 || !replacement) {
-        victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(valid_blocks));
+        replacement = static_cast<CacheBlk*>(replacementPolicy->getVictim(valid_blocks));
         evicts.push_back(replacement);
     }
 
@@ -176,21 +176,21 @@ CacheBlk* BaseSetAssoc::findCompressedDataReplacement(Addr addr,
         // Find valid blocks large enough to meet the space requirement
         for (const auto& block : valid_blocks) {
             CacheBlk* cache_blk = static_cast<CacheBlk*>(block);
-            if (((cache_blk->cSize + 63) / 64) >= extra_segments && cache_blk != victim) {
+            if (((cache_blk->cSize + 63) / 64) >= extra_segments && cache_blk != replacement) {
                 large_blocks.push_back(block);
             }
         }
 
         // Evict from the filtered list if necessary
         if (!large_blocks.empty()) {
-            victim = static_cast<CacheBlk*>(replacementPolicy->getVictim(large_blocks));
+            replacement = static_cast<CacheBlk*>(replacementPolicy->getVictim(large_blocks));
             evicts.push_back(replacement);
         }
     }
 
     extra_segments -= ((replacement->cSize + 63) / 64);
 
-    // Return the block being updated, or the selected victim
+    // Return the block being updated, or the selected block to be replaced
     return (update_blk) ? update_blk : replacement;
 }
 
